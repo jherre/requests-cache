@@ -44,7 +44,7 @@ class MongoDict(MutableMapping):
         return result['data']
 
     def __setitem__(self, key, item):
-        self.collection.save({'_id': key, 'data': item, 'updated_at': datetime.now()})
+        self.collection.save({'_id': key, 'data': item, 'updated_at': datetime.utcnow()})
 
     def __delitem__(self, key):
         spec = {'_id': key}
