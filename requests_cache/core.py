@@ -14,7 +14,7 @@ from requests import Session as OriginalSession
 from requests.hooks import dispatch_hook
 
 from requests_cache import backends
-from requests_cache.compat import str, basestring
+from requests_cache.compat import str, basestring, urlparse
 
 try:
     ver = tuple(map(int, requests.__version__.split(".")))
@@ -64,6 +64,7 @@ class CachedSession(OriginalSession):
             self.cache = backend
 
         self._cache_expire_after = expire_after
+        self._cache_expire_after_override = {}
         self._cache_allowable_codes = allowable_codes
         self._cache_allowable_methods = allowable_methods
         self._is_cache_disabled = False
@@ -89,11 +90,13 @@ class CachedSession(OriginalSession):
         if response is None:
             return send_request_and_cache_response()
 
-        if self._cache_expire_after is not None:
+        expire_after = self._lookup_expire_after(request.url)
+        if expire_after is not None:
             difference = datetime.utcnow() - timestamp
-            if difference > timedelta(seconds=self._cache_expire_after):
+            if difference > timedelta(seconds=expire_after):
                 self.cache.delete(cache_key)
                 return send_request_and_cache_response()
+
         # dispatch hook here, because we've removed it before pickling
         response.from_cache = True
         response = dispatch_hook('response', request.hooks, response, **kwargs)
@@ -134,6 +137,40 @@ class CachedSession(OriginalSession):
         finally:
             self._is_cache_disabled = False
 
+    def expire_after(self, url, expire_after=300):
+        """
+        Override the base expire_after setting by url prefix.  Will
+        find the longest registered setting for each domain which
+        will then be used for expiring such requests.  These overrides
+        MUST BE lower than the default setting.
+        """
+        if not self._cache_expire_after:
+            return None
+
+        if expire_after > self._cache_expire_after or expire_after < 0:
+            raise ValueError
+
+        # a dictionary of lists of tuples
+        p_url = urlparse(url)
+        a = self._cache_expire_after_override[p_url.netloc] = []
+        a.append((p_url.path, expire_after,))
+        a.sort(key=lambda t: len(t[0]), reverse=True)
+        self._cache_expire_after_override[p_url.netloc] = a
+        
+        return expire_after
+
+    def _lookup_expire_after(self, url):
+        if not self._cache_expire_after:
+            return None
+
+        p_url = urlparse(url)
+        a = self._cache_expire_after_override.get(p_url.netloc, [])
+        for path, secs in a:
+            if p_url.path.startswith(path):
+                return secs
+
+        return self._cache_expire_after
+        
 
 def install_cache(cache_name='cache', backend=None, expire_after=None,
                  allowable_codes=(200,), allowable_methods=('GET',),
@@ -222,6 +259,15 @@ def clear():
     """
     get_cache().clear()
 
+def expire_after(url, expire_after=300):
+    """Sets the expire_after value for the url prefix in the globally 
+    installed ``CacheSession``
+    """
+    s = requests.Session()
+    if not isinstance(s, CachedSession):
+        raise TypeError
+
+    return s.expire_after(url, expire_after)
 
 def _patch_session_factory(session_factory=CachedSession):
     requests.Session = requests.sessions.Session = session_factory

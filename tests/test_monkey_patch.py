@@ -40,6 +40,17 @@ class MonkeyPatchTestCase(unittest.TestCase):
         r = requests.get('http://httpbin.org/get')
         self.assertTrue(r.from_cache)
 
+    def test_expire_after_installed(self):
+        requests_cache.install_cache(name=CACHE_NAME, backend=CACHE_BACKEND)
+        requests_cache.expire_after('http://httpbin.org/get', 2)        
+        r = requests.get('http://httpbin.org/get')
+        self.assertFalse(r.from_cache)
+        r = requests.get('http://httpbin.org/get')
+        self.assertTrue(r.from_cache)
+
+    def test_expire_after_not_installed(self):
+        with self.assertRaises(TypeError):
+            requests_cache.expire_after('http://httpbin.org/get', 2)
 
 if __name__ == '__main__':
     unittest.main()

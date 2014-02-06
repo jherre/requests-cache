@@ -51,6 +51,27 @@ class CacheTestCase(unittest.TestCase):
         delta = time.time() - t
         self.assertGreaterEqual(delta, delay)
 
+    def test_expire_cache_override(self):
+        delay = 1
+        url = httpbin('delay/%s' % delay)
+        s = CachedSession(CACHE_NAME, backend=CACHE_BACKEND, expire_after=300)
+        s.expire_after(url, 0.06)
+        t = time.time()
+        r = s.get(url)
+        delta = time.time() - t
+        self.assertGreaterEqual(delta, delay)
+        time.sleep(0.5)
+        t = time.time()
+        r = s.get(url)
+        delta = time.time() - t
+        self.assertGreaterEqual(delta, delay)
+
+    def test_expire_cache_override_value_error(self):
+        url = httpbin('delay/1')
+        s = CachedSession(CACHE_NAME, backend=CACHE_BACKEND, expire_after=1)
+        with self.assertRaises(ValueError):
+            s.expire_after(url, 2)
+
     def test_delete_urls(self):
         url = httpbin('redirect/3')
         r = self.s.get(url)
