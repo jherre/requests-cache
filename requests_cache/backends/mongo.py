@@ -16,7 +16,7 @@ class MongoCache(BaseCache):
     def __init__(self, **options):
         """
         :param db_name: database name (default: ``'requests-cache'``)
-        :param connection: (optional) ``pymongo.Connection``
+        :param connection: (optional) ``pymongo.MongoClient``
         """
         super(MongoCache, self).__init__()
         db_name = options.get('db_name', 'requests_cache')

@@ -12,7 +12,7 @@ try:
 except ImportError:
     import pickle
 
-from pymongo import Connection, ASCENDING
+from pymongo import MongoClient, ASCENDING
 from datetime import datetime
 
 class MongoDict(MutableMapping):
@@ -23,14 +23,14 @@ class MongoDict(MutableMapping):
         """
         :param db_name: database name (be careful with production databases)
         :param collection_name: collection name (default: mongo_dict_data)
-        :param connection: ``pymongo.Connection`` instance. If it's ``None``
+        :param connection: ``pymongo.MongoClient`` instance. If it's ``None``
                            (default) new connection with default options will
                            be created
         """
         if connection is not None:
             self.connection = connection
         else:
-            self.connection = Connection()
+            self.connection = MongoClient()
         self.db = self.connection[db_name]
         self.collection = self.db[collection_name]
 
