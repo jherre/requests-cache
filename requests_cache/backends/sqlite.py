@@ -16,8 +16,7 @@ class DbCache(BaseCache):
     Reading is fast, saving is a bit slower. It can store big amount of data
     with low memory usage.
     """
-    def __init__(self, location='cache',
-                 fast_save=False, extension='.sqlite', **options):
+    def __init__(self, **options):
         """
         :param location: database filename prefix (default: ``'cache'``)
         :param fast_save: Speedup cache saving up to 50 times but with possibility of data loss.
@@ -25,6 +24,9 @@ class DbCache(BaseCache):
         :param extension: extension for filename (default: ``'.sqlite'``)
         """
         super(DbCache, self).__init__()
+        location = options.get('location', 'cache')
+        extension = options.get('extension', '.sqlite')
+        fast_save = options.get('fast_save', False)
         self.responses = DbPickleDict(location + extension, 'responses', fast_save=fast_save)
         self.keys_map = DbDict(location + extension, 'urls')
 

@@ -38,7 +38,7 @@ def create_backend(backend_name, cache_name, options):
     if backend_name is None:
         backend_name = _get_default_backend_name()
     try:
-        return registry[backend_name](cache_name, **options)
+        return registry[backend_name](cache_name=cache_name, **options)
     except KeyError:
         raise ValueError('Unsupported backend "%s" try one of: %s' %
                          (backend_name, ', '.join(registry.keys())))
