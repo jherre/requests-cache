@@ -20,7 +20,10 @@ class MongoCache(BaseCache):
         """
         super(MongoCache, self).__init__()
         db_name = options.get('db_name', 'requests_cache')
+        expire_after = options.get('expire_after', 300)
         self.responses = MongoPickleDict(db_name, 'responses',
                                          options.get('connection'))
-        self.keys_map = MongoDict(db_name, 'urls', self.responses.connection)
+        self.keys_map = MongoDict(db_name, collection_name='urls', 
+                                  connection=self.responses.connection,
+                                  expire_after=expire_after)
 

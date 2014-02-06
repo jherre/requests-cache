@@ -12,14 +12,14 @@ try:
 except ImportError:
     import pickle
 
-from pymongo import Connection
-
+from pymongo import Connection, ASCENDING
+from datetime import datetime
 
 class MongoDict(MutableMapping):
     """ MongoDict - a dictionary-like interface for ``mongo`` database
     """
-    def __init__(self, db_name,
-                 collection_name='mongo_dict_data', connection=None):
+    def __init__(self, db_name, collection_name='mongo_dict_data',
+                 connection=None, expire_after=300):
         """
         :param db_name: database name (be careful with production databases)
         :param collection_name: collection name (default: mongo_dict_data)
@@ -34,6 +34,9 @@ class MongoDict(MutableMapping):
         self.db = self.connection[db_name]
         self.collection = self.db[collection_name]
 
+        # setting up an index for automatic expiry based on the update time
+        self.collection.ensure_index('updated_at', cache_for=expire_after)
+
     def __getitem__(self, key):
         result = self.collection.find_one({'_id': key})
         if result is None:
@@ -41,7 +44,7 @@ class MongoDict(MutableMapping):
         return result['data']
 
     def __setitem__(self, key, item):
-        self.collection.save({'_id': key, 'data': item})
+        self.collection.save({'_id': key, 'data': item, 'updated_at': datetime.now()})
 
     def __delitem__(self, key):
         spec = {'_id': key}
