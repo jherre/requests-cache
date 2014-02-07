@@ -35,7 +35,7 @@ class MongoDict(MutableMapping):
         self.collection = self.db[collection_name]
 
         # setting up an index for automatic expiry based on the update time
-        self.collection.ensure_index('updated_at', cache_for=expire_after)
+        self.collection.ensure_index('updated_at', expireAfterSeconds=expire_after)
 
     def __getitem__(self, key):
         result = self.collection.find_one({'_id': key})
