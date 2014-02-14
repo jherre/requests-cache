@@ -309,5 +309,15 @@ def expire_after(url, expire_after=300):
 
     return s.expire_after(url, expire_after)
 
+def throttle(url, requests_per_second):
+    """Sets the throttl value for the url prefix in the globally 
+    installed ``CacheSession``
+    """
+    s = requests.Session()
+    if not isinstance(s, CachedSession):
+        raise TypeError
+
+    return s.throttle(url, requests_per_second)
+
 def _patch_session_factory(session_factory=CachedSession):
     requests.Session = requests.sessions.Session = session_factory

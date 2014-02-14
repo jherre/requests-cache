@@ -28,5 +28,5 @@ __version__ = '0.4.4'
 from .core import(
     CachedSession, install_cache, uninstall_cache,
     disabled, enabled, get_cache, clear, configure,
-    expire_after)
+    expire_after, throttle)
 
