@@ -83,6 +83,18 @@ class CacheTestCase(unittest.TestCase):
         delta = time.time() - t
         self.assertGreaterEqual(delta, 1)
 
+    def test_ignore_cgi_parameter(self):
+        s = CachedSession(CACHE_NAME, backend=CACHE_BACKEND, expire_after=5)
+        s.ignore_cgi('foo') 
+        url = httpbin('get?foo=1')
+        r = s.get(url)
+        self.assertFalse(r.from_cache)
+        r = s.get(url)
+        self.assertTrue(r.from_cache)
+        url = httpbin('get')
+        r = s.get(url)
+        self.assertTrue(r.from_cache)
+
     def test_delete_urls(self):
         url = httpbin('redirect/3')
         r = self.s.get(url)

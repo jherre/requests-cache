@@ -13,7 +13,7 @@ from copy import copy
 
 import requests
 
-from ..compat import is_py2
+from ..compat import is_py2, urlsplit, parse_qsl
 
 
 class BaseCache(object):
@@ -22,11 +22,13 @@ class BaseCache(object):
     To extend it you can provide dictionary-like objects for
     :attr:`keys_map` and :attr:`responses` or override public methods.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **options):
         #: `key` -> `key_in_responses` mapping
         self.keys_map = {}
         #: `key_in_cache` -> `response` mapping
         self.responses = {}
+        #: enumeration of cgi parameters to ignore
+        self._ignore_cgi_set = options.get('ignore_cgi', ('token',))
 
     def save_response(self, key, response):
         """ Save response to cache
@@ -149,12 +151,28 @@ class BaseCache(object):
         return result
 
     def create_key(self, request):
+        """ Create a key on the request but ignoring any matching cgi params."""
         key = hashlib.sha256()
         key.update(_to_bytes(request.method.upper()))
-        key.update(_to_bytes(request.url))
+        
+        p_url = urlsplit(request.url)
+        key.update(_to_bytes(p_url.scheme))
+        key.update(_to_bytes(p_url.netloc))
+        key.update(_to_bytes(p_url.path))
+        key.update(_to_bytes(p_url.fragment))
+        
+        for k, v in sorted(parse_qsl(p_url.query, True), key=lambda t: t[0]):
+            if not k.lower() in self._ignore_cgi_set:
+                key.update(_to_bytes(k))
+                key.update(_to_bytes(v))
+                
         if request.body:
             key.update(_to_bytes(request.body))
         return key.hexdigest()
+        
+    def append_ignore_cgi(self, *names):
+        """Append each name to the ignore list."""
+        self._ignore_cgi_set = set(self._ignore_cgi_set).union(set((s.lower() for s in names)))
 
     def __str__(self):
         return 'keys: %s\nresponses: %s' % (self.keys_map, self.responses)

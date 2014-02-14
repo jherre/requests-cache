@@ -23,7 +23,7 @@ class DbCache(BaseCache):
                           See :ref:`backends.DbDict <backends_dbdict>` for more info
         :param extension: extension for filename (default: ``'.sqlite'``)
         """
-        super(DbCache, self).__init__()
+        super(DbCache, self).__init__(**options)
         location = options.get('location', 'cache')
         extension = options.get('extension', '.sqlite')
         fast_save = options.get('fast_save', False)

@@ -211,6 +211,9 @@ class CachedSession(OriginalSession):
 
         return None
         
+    def ignore_cgi(self, *names):
+        """Adds the list of named cgi parameters to ignore to the backend."""
+        self.cache.append_ignore_cgi(*names)
 
 def install_cache(cache_name='cache', backend=None, expire_after=None,
                  allowable_codes=(200,), allowable_methods=('GET',),
@@ -310,7 +313,7 @@ def expire_after(url, expire_after=300):
     return s.expire_after(url, expire_after)
 
 def throttle(url, requests_per_second):
-    """Sets the throttl value for the url prefix in the globally 
+    """Sets the throttle value for the url prefix in the globally 
     installed ``CacheSession``
     """
     s = requests.Session()
@@ -318,6 +321,15 @@ def throttle(url, requests_per_second):
         raise TypeError
 
     return s.throttle(url, requests_per_second)
+
+def ignore_cgi(*names):
+    """Adds to the list of ignored cgi parameters.
+    """
+    s = requests.Session()
+    if not isinstance(s, CachedSession):
+        raise TypeError
+
+    return s.ignore_cgi(*names)
 
 def _patch_session_factory(session_factory=CachedSession):
     requests.Session = requests.sessions.Session = session_factory
