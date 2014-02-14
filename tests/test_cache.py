@@ -54,7 +54,7 @@ class CacheTestCase(unittest.TestCase):
     def test_expire_cache_override(self):
         delay = 1
         url = httpbin('delay/%s' % delay)
-        s = CachedSession(CACHE_NAME, backend=CACHE_BACKEND, expire_after=300)
+        s = CachedSession(CACHE_NAME, backend=CACHE_BACKEND, expire_after=5)
         s.expire_after(url, 0.06)
         t = time.time()
         r = s.get(url)
@@ -71,6 +71,17 @@ class CacheTestCase(unittest.TestCase):
         s = CachedSession(CACHE_NAME, backend=CACHE_BACKEND, expire_after=1)
         with self.assertRaises(ValueError):
             s.expire_after(url, 2)
+
+    def test_throttle_cache(self):
+        url = httpbin('get')
+        s = CachedSession(CACHE_NAME, backend=CACHE_BACKEND, expire_after=0.06)
+        s.throttle(url, 0.5) # one every 2 seconds
+        r = s.get(url)
+        time.sleep(0.6)
+        t = time.time()
+        r = s.get(url)
+        delta = time.time() - t
+        self.assertGreaterEqual(delta, 1)
 
     def test_delete_urls(self):
         url = httpbin('redirect/3')

@@ -8,6 +8,7 @@
 """
 from contextlib import contextmanager
 from datetime import datetime, timedelta
+from time import sleep
 
 import requests
 from requests import Session as OriginalSession
@@ -65,6 +66,7 @@ class CachedSession(OriginalSession):
 
         self._cache_expire_after = expire_after
         self._cache_expire_after_override = {}
+        self._cache_throttle = {}
         self._cache_allowable_codes = allowable_codes
         self._cache_allowable_methods = allowable_methods
         self._is_cache_disabled = False
@@ -79,7 +81,16 @@ class CachedSession(OriginalSession):
 
         cache_key = self.cache.create_key(request)
 
+        def wait_for_throttle():
+            requests_per_second = self._lookup_throttle(request.url)
+            if requests_per_second is not None and requests_per_second > 0:
+                # enventually we'll use the cache to distribute these
+                # but for now just wait
+                seconds_per_request = 1.0 / requests_per_second
+                sleep(seconds_per_request)                
+            
         def send_request_and_cache_response():
+            wait_for_throttle()
             response = super(CachedSession, self).send(request, **kwargs)
             if response.status_code in self._cache_allowable_codes:
                 self.cache.save_response(cache_key, response)
@@ -170,6 +181,35 @@ class CachedSession(OriginalSession):
                 return secs
 
         return self._cache_expire_after
+        
+    def throttle(self, url, requests_per_second):
+        """
+        Specify a throttle rate for requests to the given url.  All
+        urls below the given url will be throttled at this rate.  To
+        throttle an entire domain, provide the root url.
+        """
+        requests_per_second = float(requests_per_second)
+
+        if requests_per_second < 0 or requests_per_second > 1000:
+            raise ValueError
+
+        # a dictionary of lists of tuples
+        p_url = urlparse(url)
+        a = self._cache_throttle[p_url.netloc] = []
+        a.append((p_url.path, requests_per_second,))
+        a.sort(key=lambda t: len(t[0]), reverse=True)
+        self._cache_throttle[p_url.netloc] = a
+        
+        return requests_per_second
+
+    def _lookup_throttle(self, url):
+        p_url = urlparse(url)
+        a = self._cache_throttle.get(p_url.netloc, [])
+        for path, requests_per_second in a:
+            if p_url.path.startswith(path):
+                return requests_per_second
+
+        return None
         
 
 def install_cache(cache_name='cache', backend=None, expire_after=None,
