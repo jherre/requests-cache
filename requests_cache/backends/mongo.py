@@ -23,7 +23,9 @@ class MongoCache(BaseCache):
         db_collection = options.get('db_collection', 'responses')
         expire_after = options.get('expire_after', 300)
         self.responses = MongoPickleDict(db_name, db_collection,
-                                         options.get('connection'))
-        self.keys_map = MongoDict(db_name, collection_name='urls', 
+                                         options.get('connection'),
+                                         expire_after=expire_after)
+        db_collection = db_collection + 'urls'
+        self.keys_map = MongoDict(db_name, collection_name=db_collection, 
                                   connection=self.responses.connection,
                                   expire_after=expire_after)

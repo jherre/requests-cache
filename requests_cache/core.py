@@ -58,6 +58,7 @@ class CachedSession(OriginalSession):
                                 :ref:`sqlite <backends_sqlite>`, :ref:`mongo <backends_mongo>` 
                                 and :ref:`redis <backends_redis>` backends API documentation
         """
+        backend_options['expire_after'] = expire_after
         if backend is None or isinstance(backend, basestring):
             self.cache = backends.create_backend(backend, cache_name,
                                                  backend_options)
@@ -226,11 +227,11 @@ def install_cache(cache_name='cache', backend=None, expire_after=None,
     :param session_factory: Session factory. It should inherit :class:`CachedSession` (default)
     """
     if backend:
+        backend_options['expire_after'] = expire_after
         backend = backends.create_backend(backend, cache_name, backend_options)
     _patch_session_factory(
         lambda : session_factory(cache_name=cache_name,
                                   backend=backend,
-                                  expire_after=expire_after,
                                   allowable_codes=allowable_codes,
                                   allowable_methods=allowable_methods,
                                   **backend_options)
